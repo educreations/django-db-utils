@@ -107,6 +107,7 @@ def attach_profile(users):
     from django.db import models
     from django.conf import settings
     from django.contrib.auth.models import SiteProfileNotAvailable
+    from django.core.exceptions import ImproperlyConfigured
     if not getattr(settings, 'AUTH_PROFILE_MODULE', False):
         raise SiteProfileNotAvailable('You need to set AUTH_PROFILE_MO'
                                       'DULE in your project settings')
@@ -123,13 +124,12 @@ def attach_profile(users):
             raise SiteProfileNotAvailable('Unable to load the profile '
                 'model, check AUTH_PROFILE_MODULE in your project sett'
                 'ings')
-        self._profile_cache = model._default_manager.using(self._state.db).get(user__id__exact=self.id)
-        self._profile_cache.user = self
     except (ImportError, ImproperlyConfigured):
         raise SiteProfileNotAvailable
     
     # For each user, get the profile
-    profiles = queryset_to_dict(model._default_manager.in_bulk(set([u.pk for u in users])))
+    profiles = queryset_to_dict(model._default_manager\
+        .filter(pk__in=set([u.pk for u in users])))
     for u in users:
         u._profile_cache = profiles.get(u.pk)
         u._profile_cache.user = u
